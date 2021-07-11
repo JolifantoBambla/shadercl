@@ -1,11 +1,11 @@
 ;;;; bindings.lisp
 
-(in-package #:%glslang)
+(in-package #:%shadercl)
 
-(define-foreign-library glslang
-  (:unix "libglslang.a")) ;; oh fuck, there is only a static lib included in the sdk... ok, shaderc it is then
+(define-foreign-library shaderc
+  (:unix (:or "libshaderc_shared.so" "libshaderc_shared.so.1")))
 
-(use-foreign-library glslang)
+(use-foreign-library shaderc)
 
 ;;;; base types
 
@@ -13,399 +13,210 @@
     (defctype size-t :uint64)
     (defctype size-t :uint32))
 
+;;; env.h
+(defcenum (target-env :unsigned-int)
+  (:vulkan 0)
+  :opengl
+  :opengl-compat
+  :webgpu ;; deprecated
+  (:default 0))
 
-(defctype glsl-include-system-func :pointer)
-(defctype glsl-include-local-func :pointer)
-(defctype glsl-free-include-result-func :pointer)
-
-;;;; enums & bitmasks
-(defcenum (stage-t :unsigned-int)
-  (:vertex 0)
-  (:tesscontrol 1)
-  (:tessevaluation 2)
-  (:geometry 3)
-  (:fragment 4)
-  (:compute 5)
-  (:raygen-nv 6)
-  (:intersect-nv 7)
-  (:anyhit-nv 8)
-  (:closesthit-nv 9)
-  (:miss-nv 10)
-  (:callable-nv 11)
-  (:task-nv 12)
-  (:mesh-nv 13)
-  (:count 14))
-               
-(defcenum (stage-mask-t :unsigned-int)
-  (:vertex-mask 1)
-  (:tesscontrol-mask 2)
-  (:tessevaluation-mask 4)
-  (:geometry-mask 8)
-  (:fragment-mask 16)
-  (:compute-mask 32)
-  (:raygen-nv-mask 64)
-  (:intersect-nv-mask 128)
-  (:anyhit-nv-mask 256)
-  (:closesthit-nv-mask 512)
-  (:miss-nv-mask 1024)
-  (:callable-nv-mask 2048)
-  (:task-nv-mask 4096)
-  (:mesh-nv-mask 8192)
-  (:mask-count 8193))
-
-(defcenum (source-t :unsigned-int)
-  (:none 0)
-  (:glsl 1)
-  (:hlsl 2)
-  (:count 3))
-
-(defcenum (client-t :unsigned-int)
-  (:none 0)
-  (:vulkan 1)
-  (:opengl 2)
-  (:count 3))
-
-(defcenum (target-language-t :unsigned-int)
-  (:none 0)
-  (:spv 1)
-  (:count 2))
-
-(defcenum (target-client-version-t :unsigned-int)
+(defcenum (env-version :unsigned-int)
   (:vulkan-1-0 4194304)
   (:vulkan-1-1 4198400)
   (:vulkan-1-2 4202496)
-  (:opengl-450 450)
-  (:client-version-count 4))
-               
-(defcenum (target-language-version-t :unsigned-int)
+  (:opengl-4-5 450)
+  (:webgpu)) ;; deprecated
+
+(defcenum (spirv-version :unsigned-int)
   (:spv-1-0 65536)
   (:spv-1-1 65792)
   (:spv-1-2 66048)
   (:spv-1-3 66304)
   (:spv-1-4 66560)
-  (:spv-1-5 66816)
-  (:language-version-count 6))
+  (:spv-1-5 66816))
 
-(defcenum (executable-t :unsigned-int)
-  (:vertex-fragment 0)
-  (:fragment 1))
+;;; status.h
+(defcenum (compilation-status :unsigned-int)
+  (:success 0)
+  (:invalid-stage 1)
+  (:compilation-error 2)
+  (:internal-error 3)
+  (:null-result-object 4)
+  (:invalid-assembly 5)
+  (:validation-error 6)
+  (:transformation-error 7)
+  (:configuration-error 8))
 
+;;; shaderc.h
+(defcenum (source-language :unsinged-int)
+  :glsl
+  :hlsl)
 
-(defcenum (optimization-level-t :unsigned-int)
-  (:no-generation 0)
-  (:none 1)
-  (:simple 2)
-  (:full 3)
-  (:level-count 4))
+(defcenum (shader-kind :unsigned-int)
+  (:vertex-shader 0)
+  :fragment-shader
+  :compute-shader
+  :geometry-shader
+  :tess-control-shader
+  :tess-evaluation-shader
+  (:glsl-vertex-shader 0)
+  (:glsl-fragment-shader 1)
+  (:glsl-compute-shader 2)
+  (:glsl-geometry-shader 3)
+  (:glsl-tess-control-shader 4)
+  (:glsl-tess-evaluation-shader 5)
+  :glsl-infer-from-source
+  :glsl-default-vertex-shader
+  :glsl-default-fragment-shader
+  :glsl-default-compute-shader
+  :glsl-default-geometry-shader
+  :glsl-default-tess-control-shader
+  :glsl-default-tess-evaluation-shader
+  :spirv-assembly
+  :raygen-shader
+  :anyhit-shader
+  :closesthit-shader
+  :miss-shader
+  :intersection-shader
+  :callable-shader
+  (:glsl-raygen-shader 14)
+  (:glsl-anyhit-shader 15)
+  (:glsl-closesthit-shader 16)
+  (:glsl-miss-shader 17)
+  (:glsl-intersection-shader 18)
+  (:glsl-callable-shader 19)
+  :glsl-default-raygen-shader
+  :glsl-default-anyhit-shader
+  :glsl-default-closesthit-shader
+  :glsl-default-miss-shader
+  :glsl-default-intersection-shader
+  :glsl-default-callable-shader
+  :task-shader
+  :mesh-shader
+  (:glsl-task-shader 26)
+  (:glsl-mesh-shader 27)
+  :glsl-default-task-shader
+  :glsl-default-mesh-shader)
 
-(defcenum (texture-sampler-transform-mode-t :unsigned-int)
-  (:keep 0)
-  (:upgrade-texture-remove-sampler 1)
-  (:count 2))
+(defcenum (profile :unsigned-int)
+  :none
+  :core
+  :compatibility ;; disabled -> produces error
+  :es)
 
-(defcenum (messages-t :unsigned-int)
-  (:default-bit 0)
-  (:relaxed-errors-bit 1)
-  (:suppress-warnings-bit 2)
-  (:ast-bit 4)
-  (:spv-rules-bit 8)
-  (:vulkan-rules-bit 16)
-  (:only-preprocessor-bit 32)
-  (:read-hlsl-bit 64)
-  (:cascading-errors-bit 128)
-  (:keep-uncalled-bit 256)
-  (:hlsl-offsets-bit 512)
-  (:debug-info-bit 1024)
-  (:hlsl-enable-16bit-types-bit 2048)
-  (:hlsl-legalization-bit 4096)
-  (:hlsl-dx9-compatible-bit 8192)
-  (:builtin-symbol-table-bit 16384)
-  (:count 16385))
+(defcenum (optimization-level :unsigned-int)
+  :zero
+  :size
+  :performance)
 
-(defcenum (profile-t :unsigned-int)
-  (:bad-profile 0)
-  (:no-profile 1)
-  (:core-profile 2)
-  (:compatibility-profile 4)
-  (:es-profile 8)
-  (:profile-count 9))
+(defcenum (limit :unsigned-int)
+  :max-lights
+  :max-clip-planes
+  :max-texture-units
+  :max-texture-coords
+  :max-vertex-attribs
+  :max-vertex-uniform-components
+  :max-varying-floats
+  :max-vertex-texture-image-units
+  :max-combined-texture-image-units
+  :max-texture-image-units
+  :max-fragment-uniform-components
+  :max-draw-buffers
+  :max-vertex-uniform-vectors
+  :max-varying-vectors
+  :max-fragment-uniform-vectors
+  :max-vertex-output-vectors
+  :max-fragment-input-vectors
+  :min-program-texel-offset
+  :max-program-texel-offset
+  :max-clip-distances
+  :max-compute-work-group-count-x
+  :max-compute-work-group-count-y
+  :max-compute-work-group-count-z
+  :max-compute-work-group-size-x
+  :max-compute-work-group-size-y
+  :max-compute-work-group-size-z
+  :max-compute-uniform-components
+  :max-compute-texture-image-units
+  :max-compute-image-uniforms
+  :max-compute-atomic-counters
+  :max-compute-atomic-counter-buffers
+  :max-varying-components
+  :max-vertex-output-components
+  :max-geometry-input-components
+  :max-geometry-output-components
+  :max-fragment-input-components
+  :max-image-units
+  :max-combined-image-units-and-fragment-outputs
+  :max-combined-shader-output-resources
+  :max-image-samples
+  :max-vertex-image-uniforms
+  :max-tess-control-image-uniforms
+  :max-tess-evaluation-image-uniforms
+  :max-geometry-image-uniforms
+  :max-fragment-image-uniforms
+  :max-combined-image-uniforms
+  :max-geometry-texture-image-units
+  :max-geometry-output-vertices
+  :max-geometry-total-output-components
+  :max-geometry-uniform-components
+  :max-geometry-varying-components
+  :max-tess-control-input-components
+  :max-tess-control-output-components
+  :max-tess-control-texture-image-units
+  :max-tess-control-uniform-components
+  :max-tess-control-total-output-components
+  :max-tess-evaluation-input-components
+  :max-tess-evaluation-output-components
+  :max-tess-evaluation-texture-image-units
+  :max-tess-evaluation-uniform-components
+  :max-tess-patch-components
+  :max-patch-vertices
+  :max-tess-gen-level
+  :max-viewports
+  :max-vertex-atomic-counters
+  :max-tess-control-atomic-counters
+  :max-tess-evaluation-atomic-counters
+  :max-geometry-atomic-counters
+  :max-fragment-atomic-counters
+  :max-combined-atomic-counters
+  :max-atomic-counter-bindings
+  :max-vertex-atomic-counter-buffers
+  :max-tess-control-atomic-counter-buffers
+  :max-tess-evaluation-atomic-counter-buffers
+  :max-geometry-atomic-counter-buffers
+  :max-fragment-atomic-counter-buffers
+  :max-combined-atomic-counter-buffers
+  :max-atomic-counter-buffer-size
+  :max-transform-feedback-buffers
+  :max-transform-feedback-interleaved-components
+  :max-cull-distances
+  :max-combined-clip-and-cull-distances
+  :max-samples)
 
-(defcenum (reflection-options-t :unsigned-int)
-  (:default-bit 0)
-  (:strict-array-suffix-bit 1)
-  (:basic-array-suffix-bit 2)
-  (:intermediate-ioo-bit 4)
-  (:separate-buffers-bit 8)
-  (:all-block-variables-bit 16)
-  (:unwrap-io-blocks-bit 32)
-  (:all-io-variables-bit 64)
-  (:shared-std140-ssbo-bit 128)
-  (:shared-std140-ubo-bit 256)
-  (:count 257))
+(defcenum (uniform-kind :unsigned-int)
+  :image
+  :sampler
+  :texture
+  :buffer
+  :storage-buffer
+  :access-view)
 
-;;;; structs
+(defctype shader-compiler :pointer)
 
-(defcstruct (limits-t)
-  (non-inductive-for-loops :boolean)
-  (while-loops :boolean)
-  (do-while-loops :boolean)
-  (general-uniform-indexing :boolean)
-  (general-attribute-matrix-vector-indexing :boolean)
-  (general-varying-indexing :boolean)
-  (general-sampler-indexing :boolean)
-  (general-variable-indexing :boolean)
-  (general-constant-matrix-vector-indexing :boolean))
+(declaim (inline compiler-initialize))
+(defcfun (":compiler-initialize"
+          compiler-initialize)
+    shader-compiler)
 
-(defcstruct (resource-t)
-  (max-lights :int)
-  (max-clip-planes :int)
-  (max-texture-units :int)
-  (max-texture-coords :int)
-  (max-vertex-attribs :int)
-  (max-vertex-uniform-components :int)
-  (max-varying-floats :int)
-  (max-vertex-texture-image-units :int)
-  (max-combined-texture-image-units :int)
-  (max-texture-image-units :int)
-  (max-fragment-uniform-components :int)
-  (max-draw-buffers :int)
-  (max-vertex-uniform-vectors :int)
-  (max-varying-vectors :int)
-  (max-fragment-uniform-vectors :int)
-  (max-vertex-output-vectors :int)
-  (max-fragment-input-vectors :int)
-  (min-program-texel-offset :int)
-  (max-program-texel-offset :int)
-  (max-clip-distances :int)
-  (max-compute-work-group-count-x :int)
-  (max-compute-work-group-count-y :int)
-  (max-compute-work-group-count-z :int)
-  (max-compute-work-group-size-x :int)
-  (max-compute-work-group-size-y :int)
-  (max-compute-work-group-size-z :int)
-  (max-compute-uniform-components :int)
-  (max-compute-texture-image-units :int)
-  (max-compute-image-uniforms :int)
-  (max-compute-atomic-counters :int)
-  (max-compute-atomic-counter-buffers :int)
-  (max-varying-components :int)
-  (max-vertex-output-components :int)
-  (max-geometry-input-components :int)
-  (max-geometry-output-components :int)
-  (max-fragment-input-components :int)
-  (max-image-units :int)
-  (max-combined-image-units-and-fragment-outputs :int)
-  (max-combined-shader-output-resources :int)
-  (max-image-samples :int)
-  (max-vertex-image-uniforms :int)
-  (max-tess-control-image-uniforms :int)
-  (max-tess-evaluation-image-uniforms :int)
-  (max-geometry-image-uniforms :int)
-  (max-fragment-image-uniforms :int)
-  (max-combined-image-uniforms :int)
-  (max-geometry-texture-image-units :int)
-  (max-geometry-output-vertices :int)
-  (max-geometry-total-output-components :int)
-  (max-geometry-uniform-components :int)
-  (max-geometry-varying-components :int)
-  (max-tess-control-input-components :int)
-  (max-tess-control-output-components :int)
-  (max-tess-control-texture-image-units :int)
-  (max-tess-control-uniform-components :int)
-  (max-tess-control-total-output-components :int)
-  (max-tess-evaluation-input-components :int)
-  (max-tess-evaluation-output-components :int)
-  (max-tess-evaluation-texture-image-units :int)
-  (max-tess-evaluation-uniform-components :int)
-  (max-tess-patch-components :int)
-  (max-patch-vertices :int)
-  (max-tess-gen-level :int)
-  (max-viewports :int)
-  (max-vertex-atomic-counters :int)
-  (max-tess-control-atomic-counters :int)
-  (max-tess-evaluation-atomic-counters :int)
-  (max-geometry-atomic-counters :int)
-  (max-fragment-atomic-counters :int)
-  (max-combined-atomic-counters :int)
-  (max-atomic-counter-bindings :int)
-  (max-vertex-atomic-counter-buffers :int)
-  (max-tess-control-atomic-counter-buffers :int)
-  (max-tess-evaluation-atomic-counter-buffers :int)
-  (max-geometry-atomic-counter-buffers :int)
-  (max-fragment-atomic-counter-buffers :int)
-  (max-combined-atomic-counter-buffers :int)
-  (max-atomic-counter-buffer-size :int)
-  (max-transform-feedback-buffers :int)
-  (max-transform-feedback-interleaved-components :int)
-  (max-cull-distances :int)
-  (max-combined-clip-and-cull-distances :int)
-  (max-samples :int)
-  (max-mesh-output-vertices-nv :int)
-  (max-mesh-output-primitives-nv :int)
-  (max-mesh-work-group-size-x-nv :int)
-  (max-mesh-work-group-size-y-nv :int)
-  (max-mesh-work-group-size-z-nv :int)
-  (max-task-work-group-size-x-nv :int)
-  (max-task-work-group-size-y-nv :int)
-  (max-task-work-group-size-z-nv :int)
-  (max-mesh-view-count-nv :int)
-  (maxDualSourceDrawBuffersEXT :int)
-  (limits (:struct limits-t)))
-
-(defcstruct (input-t)
-  (language source-t)
-  (stage stage-t)
-  (client client-t)
-  (client-version target-client-version-t)
-  (target-language target-language-t)
-  (target-language-version target-language-version-t)
-  (code :string) ;; shader source code
-  (default-version :int)
-  (default-profile profile-t)
-  (force-default-version-and-profile :int)
-  (forward-compatible :int)
-  (messages messages-t)
-  (resource (:pointer (:struct resource-t))))
-
-(defcstruct (glsl-include-result-t)
-  (header-name :string)
-  (header-data :string)
-  (header-length size-t))
-
-(defcstruct (glsl-include-callback-t)
-  (include-system glsl-include-system-func)
-  (include-local glsl-include-local-func)
-  (free-include-result glsl-free-include-result-func))
-
-(defcstruct (program-t))
-
-(defcstruct (shader-t))
-
-;;;; functions
-
-;;; process
-(declaim (inline initialize-process))
-(defcfun ("glslang_initialize_process"
-          initialize-process)
-    :int)
-              
-(declaim (inline finalize-process))
-(defcfun ("glslang_finalize_process"
-          finalize-process)
-    :void)
-
-;;; shader
-(declaim (inline shader-create))
-(defcfun ("glslang_shader_create"
-          shader-create)
-    (:pointer (:struct shader-t))
-  (input (:pointer (:struct input-t))))
-              
-(declaim (inline shader-delete))
-(defcfun ("glslang_shader_delete"
-          shader-delete)
+(declaim (inline compiler-release))
+(defcfun (":compiler-release"
+          compiler-release)
     :void
-  (shader (:pointer (:struct shader-t))))
+  shader-compiler shader-compiler)
 
-(declaim (inline shader-preprocess))
-(defcfun ("glslang_shader_preprocess"
-          shader-preprocess)
-    :int
-  (shader (:pointer (:struct shader-t)))
-  (input (:pointer (:struct input-t))))
+(defctype compile-options :pointer)
 
-(declaim (inline shader-parse))
-(defcfun ("glslang_shader_parse"
-          shader-parse)
-    :int
-  (shader (:pointer (:struct shader-t)))
-  (input (:pointer (:struct input-t))))
-
-(declaim (inline shader-get-preprocessed-code))
-(defcfun ("glslang_shader_get_preprocessed_code"
-          shader-get-preprocessed-code)
-    :string
-  (shader (:pointer (:struct shader-t))))
-
-(declaim (inline shader-get-info-log))
-(defcfun ("glslang_shader_get_info_log"
-          shader-get-info-log)
-    :string
-  (shader (:pointer (:struct shader-t))))
-
-(declaim (inline shader-get-info-debug-log))
-(defcfun ("glslang_shader_get_info_debug_log"
-          shader-get-info-debug-log)
-    :string
-  (shader (:pointer (:struct shader-t))))
-
-;;; program
-(declaim (inline program-create))
-(defcfun ("glslang_program_create"
-          program-create)
-    (:pointer (:struct program-t)))
-
-(declaim (inline program-delete))
-(defcfun ("glslang_program_delete"
-          program-delete)
-    :void
-  (program (:pointer (:struct program-t))))
-
-(declaim (inline program-add-shader))
-(defcfun ("glslang_program_add_shader"
-          program-add-shader)
-    :void
-  (program (:pointer (:struct program-t)))
-  (shader (:pointer (:struct shader-t))))
-
-(declaim (inline program-link))
-(defcfun ("glslang_program_link"
-          program-link)
-    :int
-  (program (:pointer (:struct program-t)))
-  (messages messages-t)) ;; an int in the header file
-
-(declaim (inline program-spirv-generate))
-(defcfun ("glslang_program_SPIRV_generate"
-          program-spirv-generate)
-    :void
-  (program (:pointer (:struct program-t)))
-  (stage stage-t))
-
-(declaim (inline program-spirv-get-size))
-(defcfun ("glslang_program_SPIRV_get_size"
-          program-spirv-get-size)
-    size-t
-  (program (:pointer (:struct program-t))))
-
-(declaim (inline program-spirv-get))
-(defcfun ("glslang_program_SPIRV_get"
-          program-spirv-get)
-    :void
-  (program (:pointer (:struct program-t)))
-  (return-arg (:pointer :unsigned-int))) ;; I guess this is a return argument (byte array of size program-spirv-get-size)
-
-(declaim (inline program-spirv-get-ptr))
-(defcfun ("glslang_program_SPIRV_get_ptr"
-          program-spirv-get-ptr)
-    (:pointer :unsigned-int)
-  (program (:pointer (:struct program-t))))
-
-(declaim (inline program-spirv-get-messages))
-(defcfun ("glslang_program_SPIRV_get_messages"
-          program-spirv-get-messages)
-    :string
-  (program (:pointer (:struct program-t))))
-
-(declaim (inline program-get-info-log))
-(defcfun ("glslang_program_get_info_log"
-          program-get-info-log)
-    :string
-  (program (:pointer (:struct program-t))))
-
-(declaim (inline program-get-info-debug-log))
-(defcfun ("glslang_program_get_info_debug_log"
-          program-get-info-debug-log)
-    :string
-  (program (:pointer (:struct program-t))))
+;; todo: rest...
 

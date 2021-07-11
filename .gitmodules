@@ -1,3 +1,6 @@
 [submodule "src/lib/glslang"]
 	path = src/lib/glslang
 	url = git@github.com:KhronosGroup/glslang.git
+[submodule "src/lib/shaderc"]
+	path = src/lib/shaderc
+	url = git@github.com:google/shaderc.git
