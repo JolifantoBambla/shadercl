@@ -1,7 +1,7 @@
 ;;;; glslang.asd
 
-(asdf:defsystem #:glslang
-  :description "CFFI bindings for glslang"
+(asdf:defsystem #:shaderc
+  :description "CFFI bindings for shaderc"
   :author "Lukas Herzberger <herzberger.lukas at gmail.com>"
   :license  "MIT"
   :version "1.0.0"

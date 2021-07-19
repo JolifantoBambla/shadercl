@@ -1,55 +1,71 @@
 ;;;; package.lisp
 
-(defpackage #:%glslang
-  (:documentation "CFFI bindings for libglslang")
+(defpackage #:%shaderc
+  (:documentation "CFFI bindings for shaderc.")
   (:use #:cl #:cffi)
   (:export
    #:size-t
    ;; callbacks
-   #:glsl-include-system-func
-   #:glsl-include-local-func
-   #:glsl-free-include-result-func
-   ;; enums & bitmasks
-   #:client-t
-   #:executable-t
-   #:messages-t
-   #:optimization-level-t
-   #:profile-t
-   #:reflection-options-t
-   #:source-t
-   #:stage-mask-t
-   #:stage-t
-   #:target-client-version-t
-   #:target-language-t
-   #:target-language-version-t
-   #:texture-sampler-transform-mode-t
+   #:include-resolve-fn
+   #:include-result-release-fn
+   ;; enums
+   #:target-env
+   #:env-version
+   #:spirv-version
+   #:compilation-status
+   #:source-language
+   #:shader-kind
+   #:profile
+   #:optimization-level
+   #:limit
+   #:uniform-kind
+   #:include-type
    ;; structs
-   #:limits-t
-   #:resource-t
-   #:input-t
-   #:glsl-include-result-t
-   #:glsl-include-callback-t
-   #:program-t
-   #:shader-t
+   #:include-result
+   ;; opaque handles
+   #:compiler
+   #:compile-options
+   #:compilation-result
    ;; functions
-   #:initialize-process
-   #:finalize-process
-   #:shader-create
-   #:shader-delete
-   #:shader-preprocess
-   #:shader-parse
-   #:shader-get-preprocessed-code
-   #:shader-get-info-log
-   #:shader-get-info-debug-log
-   #:program-create
-   #:program-delete
-   #:program-add-shader
-   #:program-link
-   #:program-spirv-generate
-   #:program-spirv-get-size
-   #:program-spirv-get
-   #:program-spirv-get-ptr
-   #:program-spirv-get-messages
-   #:program-get-info-log
-   #:program-get-info-debug-log))
+   #:compiler-initialize
+   #:compiler-release
+   #:compile-options-initialize
+   #:compile-options-clone
+   #:compile-options-release
+   #:compile-options-add-macro-definition
+   #:compile-options-set-source-language
+   #:compile-options-set-generate-debug-info
+   #:compile-options-set-optimization-level
+   #:compile-options-set-forced-version-profile
+   #:compile-options-set-include-callbacks
+   #:compile-options-suppress-warnings
+   #:compile-options-set-target-env
+   #:compile-options-set-target-spirv
+   #:compile-options-set-warnings-as-errors
+   #:compile-options-set-limit
+   #:compile-options-set-auto-bind-uniforms
+   #:compile-options-set-auto-combined-image-sampler
+   #:compile-options-set-hlsl-io-mapping
+   #:compile-options-set-hlsl-offsets
+   #:compile-options-set-binding-base
+   #:compile-options-set-binding-base-for-stage
+   #:compile-options-set-auto-map-locations
+   #:compile-options-set-hlsl-register-set-and-bindings-for-stage
+   #:compile-options-set-hlsl-register-set-and-binding
+   #:compile-options-set-hlsl-functionality-1
+   #:compile-options-set-invert-y
+   #:compile-options-set-nan-clamp
+   #:compile-into-spv
+   #:compile-into-spv-assembly
+   #:compile-into-preprocessed-text
+   #:assemble-into-spv
+   #:result-release
+   #:result-get-length
+   #:result-get-num-warnings
+   #:result-get-num-errors
+   #:result-get-compilation-status
+   #:result-get-bytes
+   #:result-get-error-message
+   #:get-spv-version
+   #:parse-version-profile))
 
