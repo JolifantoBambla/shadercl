@@ -1,6 +1,6 @@
 ;;;; bindings.lisp
 
-(in-package #:%shadercl)
+(in-package #:%shaderc)
 
 (define-foreign-library shaderc
   (:unix (:or "libshaderc_shared.so" "libshaderc_shared.so.1")))
@@ -9,9 +9,7 @@
 
 ;;;; base types
 
-(if (= 8 (foreign-type-size :pointer))
-    (defctype size-t :uint64)
-    (defctype size-t :uint32))
+(defctype size-t :unsigned-int)
 
 ;;; env.h
 (defcenum (target-env :unsigned-int)
@@ -57,7 +55,7 @@ WEBGPU: Deprecated, SPIR-V under WebGPU semantics"
   (:configuration-error 8))
 
 ;;; shaderc.h
-(defcenum (source-language :unsinged-int)
+(defcenum (source-language :unsigned-int)
   "Source language kind."
   :glsl
   :hlsl)
