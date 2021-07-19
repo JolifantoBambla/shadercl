@@ -317,9 +317,32 @@ CLAMP-NAN - Sets whether the compiler generates code for max and min builtins wh
   `(let ((,compile-options (%shaderc:compile-options-initialize)))
      (unwind-protect
           (progn
-            (set-compile-options-from-set ,compile-options ,options)
+            (when options
+              (set-compile-options-from-set ,compile-options ,options))
             ,@body)
        (%shaderc:compile-options-release ,compile-options))))
 
-
-
+(defun string-to-spv (source stage entry-point tag &optional (options nil))
+  "Compiles a shader source string into a SPIR-V binary and returns it as a vector of 32-bit integers."
+  (with-compile-options (compile-options options)
+    (with-compiler (compiler)
+      (let ((result (%shaderc:compile-into-spv compiler
+                                               source
+                                               stage
+                                               tag
+                                               entry-point
+                                               compile-options)))
+        (unwind-protect
+             (if (eq :success (%shaderc:result-get-compilation-status result))
+                 (let ((spv (make-array (/ (%shaderc:result-get-length result) 4)
+                                        :element-type '(unsinged-byte 32)
+                                        :fill-pointer 0)))
+                   (loop for i from 0 below (/ (%shaderc:result-get-length result) 4)
+                         do (vector-push (cffi:mem-aref (%shaderc:result-get-bytes result) :uint32 i) spv))
+                   spv)
+                 (error "Compilation failed with status <~a>.~%Caught ~a warnings and ~a errors.~%~%~a~%"
+                        (%shaderc:result-get-compilation-status result)
+                        (%shaderc:result-get-num-warnings result)
+                        (%shaderc:result-get-num-errors result)
+                        (%shaderc:result-get-error-message result)))
+          (%shaderc:result-release result))))))

@@ -6,7 +6,7 @@
   :license  "MIT"
   :version "1.0.0"
   :serial t
-  :depends-on (#:cffi)
+  :depends-on (#:alexandria #:cffi)
   :components ((:file "package")
                (:file "bindings")
                (:file "shaderc")))
