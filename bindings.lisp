@@ -362,7 +362,7 @@ define profiles, e.g. versions below 150."
 ;; To return an error, set the source_name to an empty string and put your
 ;; error message in content.
 
-(defcstruct (include-result)
+(defcstruct (include-result :class c-include-result)
   "An include result.
 
 SOURCE-NAME: The name of the source file.  The name should be fully resolved
@@ -380,6 +380,50 @@ USER-DATA: User data to be passed along with this request."
   (content :string)
   (content-length size-t)
   (user-data :pointer))
+
+(defclass include-result ()
+  ((source-name
+    :initarg :source-name
+    :accessor source-name
+    :initform "")
+   (content
+    :initarg :content
+    :accessor content
+    :initform "")
+   (user-data
+    :initarg :user-data
+    :accessor user-data
+    :initform (cffi:null-pointer))))
+
+(defmethod translate-into-foreign-memory (value (type c-include-result) ptr)
+  (with-foreign-slots
+      ((source-name
+        source-name-length
+        content
+        content-length
+        user-data)
+       ptr
+       (:struct include-result))
+    (setf source-name (source-name value)
+          source-name-length (length (source-name value))
+          content (content value)
+          content-length (length (content value))
+          user-data (user-data value))))
+
+(defmethod expand-into-foreign-memory (value (type c-include-result) ptr)
+  `(with-foreign-slots
+       ((source-name
+         source-name-length
+         content
+         content-length
+         user-data)
+        ,ptr
+        (:struct include-result))
+     (setf source-name (source-name ,value)
+           source-name-length (length (source-name ,value))
+           content (content ,value)
+           content-length (length (content ,value))
+           user-data (user-data ,value))))
 
 (defcenum include-type
   "The kinds of include requests."

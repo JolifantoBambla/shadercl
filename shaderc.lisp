@@ -1,5 +1,61 @@
 (in-package #:shaderc)
 
+(declaim (inline resolve-relative-include))
+(defun resolve-relative-include (requested-file requesting-file)
+  (if (and (alexandria:starts-with-subseq "/" requested-file)
+           (probe-file requested-file))
+      requested-file
+      (probe-file
+       (merge-pathnames requested-file
+                        (directory-namestring requesting-file)))))
+
+(declaim (inline resolve-standard-include))
+(defun resolve-standard-include (requested-file include-directories)
+  (loop for dir in include-directories
+        for file = (probe-file (merge-pathnames requested-file dir))
+        when file return file))
+
+(declaim (inline resolve-include))
+(defun resolve-include (requested-file include-type requesting-file include-dirs)
+  (if (eq :standard include-type)
+      (resolve-standard-include requested-file include-dirs)
+      (resolve-relative-include requested-file requesting-file)))
+
+(defparameter *default-include-dirs* nil
+  "A list of include directories for included shader sources used by DEFAULT-INCLUDE-RESOLVE-CALLBACK.")
+
+(cffi:defcallback default-include-resolve-callback
+    (:pointer (:struct %shaderc:include-result))
+    ((user-data :pointer)
+     (requested-source :string)
+     (include-type %shaderc:include-type)
+     (requesting-source :string)
+     (include-depth %shaderc:size-t))
+  (let ((included-file (resolve-include requested-source
+                                        include-type
+                                        requesting-source
+                                        *default-include-dirs*)))
+    (if included-file
+        (make-instance 'include-result
+                       :source-name (namestring included-file)
+                       :content (alexandria:read-file-into-string included-file)
+                       :user-data user-data)
+        (make-instance 'include-result
+                       :content (format nil "Could not include file <~a> from <~a> at depth <~a>."
+                                        requested-source
+                                        requesting-source
+                                        include-depth)
+                       :user-data user-data))))
+
+(cffi:defcallback default-include-result-release-callback
+    :void
+    ((user-data :pointer)
+     (include-result (:pointer (:struct %shaderc:include-result))))
+  ;; todo: this must free the include-result -> need to store it first
+  (when (and (cffi:null-pointer-p user-data)
+             (cffi:null-pointer-p include-result))
+    (format t "foo")))
+
 (defclass compile-options-set ()
   ((macros
     :initarg :macros
@@ -21,7 +77,18 @@
     :initarg :forced-version-profile
     :accessor forced-version-profile
     :initform nil)
-   ;; todo: include callbacks
+   (include-resolve-callback
+    :initarg :include-resolve-callback
+    :accessor include-resolve-callback
+    :initform (cffi:get-callback 'default-include-resolve-callback))
+   (include-result-release-callback
+    :initarg :include-result-release-callback
+    :accessor include-result-release-callback
+    :initform (cffi:get-callback 'default-include-result-release-callback))
+   (user-data
+    :initarg :user-data
+    :accessor user-data
+    :initform (cffi:null-pointer))
    (suppress-warnings
     :initarg :suppress-warnings
     :accessor suppress-warnings
@@ -102,6 +169,29 @@ FORCED-VERSION-PROFILE - Forces the GLSL language version and profile to a given
   The profile is a %SHADERC:PROFILE.
   Version and profile specified here overrides the #version annotation in the source.
 
+INCLUDE-RESOLVE-CALLBACK - An includer callback type for mapping an #include request to an include result.
+  Must have the signature:
+    (cffi:defcallback <name> (:pointer (:struct %shaderc:include-result)) ((user-data :pointer)
+                                                                           (requested-source :string)
+                                                                           (include-type %shaderc:include-type)
+                                                                           (requesting-source :string)
+                                                                           (include-depth %shaderc:size-t)))
+  The user_data parameter specifies the client context.
+  The requested_source parameter specifies the name of the source being requested.
+  The type parameter specifies the kind of inclusion request being made.
+  The requesting_source parameter specifies the name of the source containing the #include request.
+  The includer owns the result object and its contents, and both must remain valid until the release callback is called on the result object.
+  Defaults to: DEFAULT-INCLUDE-RESOLVE-CALLBACK
+
+INCLUDE-RESULT-RELEASE-CALLBACK - An includer callback type for destroying an include result.
+  Must have the signature:
+    (cffi:defcallback <name> :void ((user-data :pointer)
+                                    (include-result (:pointer (:struct %shaderc:include-result)))))
+  Defaults to: DEFAULT-INCLUDE-RESULT-RELEASE-CALLBACK
+
+USER-DATA - A pointer specifying the client context for INCLUDE-RESOLVE-CALLBACK and INCLUDE-RESULT-RELEASE-CALLBACK.
+  Defaults to: CFFI:NULL-POINTER
+
 SUPPRESS-WARNINGS - If this is truthy, warnings are suppressed.
   This overrides WARNINGS-AS-ERRORS.
 
@@ -172,7 +262,12 @@ CLAMP-NAN - Sets whether the compiler generates code for max and min builtins wh
     (%shaderc:compile-options-set-forced-version-profile compile-options
                                                          (first (forced-version-profile options))
                                                          (second (forced-version-profile options))))
-  ;; todo: include callbacks
+  (when (and (include-resolve-callback options)
+             (include-result-release-callback options))
+    (%shaderc:compile-options-set-include-callbacks compile-options
+                                                    (include-resolve-callback options)
+                                                    (include-result-release-callback options)
+                                                    (user-data options)))
   (when (suppress-warnings options)
     (%shaderc:compile-options-set-suppress-warnings compile-options))
   (when (target-env options)

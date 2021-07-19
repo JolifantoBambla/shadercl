@@ -72,9 +72,15 @@
 (defpackage #:shaderc
   (:nicknames #:sc)
   (:use #:cl)
+  (:import-from #:%shaderc
+   #:include-result)
   (:export
+   #:*default-include-dirs*
    #:with-compiler
    #:with-compile-options
+   #:resolve-relative-include
+   #:resolve-standard-include
+   #:resolve-include
    #:set-compile-options-from-set
    ;; compile options
    #:compile-options-set
