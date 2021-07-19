@@ -7,6 +7,6 @@
   :version "1.0.0"
   :serial t
   :depends-on (#:cffi)
-  :components ((:module "bindings"
-                :components ((:file "package")
-                             (:file "bindings")))))
+  :components ((:file "package")
+               (:file "bindings")
+               (:file "shaderc")))

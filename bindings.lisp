@@ -288,9 +288,9 @@ shaderc_compile_options_t object in any future calls. It is safe to pass
 NULL to this function, and doing such will have no effect."
   (options compile-options))
 
-(declaim (inline compile-options-add-macro-definition))
+(declaim (inline %compile-options-add-macro-definition))
 (defcfun ("shaderc_compile_options_add_macro_definition"
-          compile-options-add-macro-definition)
+          %compile-options-add-macro-definition)
     :void
   "Adds a predefined macro to the compilation options. This has the same
 effect as passing -Dname=value to the command-line compiler.  If value
@@ -308,6 +308,13 @@ value_length should be 0u."
   (name-length size-t)
   (value :string)
   (value-length size-t))
+
+(declaim (inline compile-options-add-macro-definition))
+(defun compile-options-add-macro-definition (options name value)
+  (%compile-options-add-macro-definition
+   options
+   name (length name)
+   value (length value)))
 
 (declaim (inline compile-options-set-source-language))
 (defcfun ("shaderc_compile_options_set_source_language"
@@ -409,9 +416,9 @@ object.")
   (result-releaser include-result-release-fn)
   (user-data :pointer))
 
-(declaim (inline compile-options-suppress-warnings))
+(declaim (inline compile-options-set-suppress-warnings))
 (defcfun ("shaderc_compile_options_set_suppress_warnings"
-          compile-options-suppress-warnings)
+          compile-options-set-suppress-warnings)
     :void
   "Sets the compiler mode to suppress warnings, overriding warnings-as-errors
 mode. When both suppress-warnings and warnings-as-errors modes are
@@ -588,9 +595,9 @@ as a composition of max and min."
   "An opaque handle to the results of a call to any shaderc_compile_into_*()
 function.")
 
-(declaim (inline compile-into-spv))
+(declaim (inline %compile-into-spv))
 (defcfun ("shaderc_compile_into_spv"
-          compile-into-spv)
+          %compile-into-spv)
     compilation-result
   "Takes a GLSL source string and the associated shader kind, input file
 name, compiles it according to the given additional_options. If the shader
@@ -619,9 +626,18 @@ null will be returned."
   (entry-point-name :string)
   (additional-options compile-options))
 
-(declaim (inline compile-into-spv-assembly))
+(declaim (inline compile-into-spv))
+(defun compile-into-spv (compiler source-text shader-kind input-file-name entry-point additional-options)
+  (%compile-into-spv compiler
+                     source-text (length source-text)
+                     shader-kind
+                     input-file-name
+                     entry-point
+                     additional-options))
+
+(declaim (inline %compile-into-spv-assembly))
 (defcfun ("shaderc_compile_into_spv_assembly"
-          compile-into-spv-assembly)
+          %compile-into-spv-assembly)
     compilation-result
   "Like shaderc_compile_into_spv, but the result contains SPIR-V assembly text
 instead of a SPIR-V binary module.  The SPIR-V assembly syntax is as defined
@@ -634,9 +650,18 @@ by the SPIRV-Tools open source project."
   (entry-point-name :string)
   (additional-options compile-options))
 
-(declaim (inline compile-into-preprocessed-text))
+(declaim (inline compile-into-spv-assembly))
+(defun compile-into-spv-assembly (compiler source-text shader-kind input-file-name entry-point additional-options)
+  (%compile-into-spv-assembly compiler
+                              source-text (length source-text)
+                              shader-kind
+                              input-file-name
+                              entry-point
+                              additional-options))
+
+(declaim (inline %compile-into-preprocessed-text))
 (defcfun ("shaderc_compile_into_preprocessed_text"
-          compile-into-preprocessed-text)
+          %compile-into-preprocessed-text)
     compilation-result
   "Like shaderc_compile_into_spv, but the result contains preprocessed source
 code instead of a SPIR-V binary module"
@@ -648,9 +673,18 @@ code instead of a SPIR-V binary module"
   (entry-point-name :string)
   (additional-options compile-options))
 
-(declaim (inline assemble-into-spv))
+(declaim (inline compile-into-preprocessed-text))
+(defun compile-into-preprocessed-text (compiler source-text shader-kind input-file-name entry-point additional-options)
+  (%compile-into-preprocessed-text compiler
+                                   source-text (length source-text)
+                                   shader-kind
+                                   input-file-name
+                                   entry-point
+                                   additional-options))
+
+(declaim (inline %assemble-into-spv))
 (defcfun ("shaderc_assemble_into_spv"
-          assemble-into-spv)
+          %assemble-into-spv)
     compilation-result
   "Takes an assembly string of the format defined in the SPIRV-Tools project
 (https://github.com/KhronosGroup/SPIRV-Tools/blob/master/syntax.md),
@@ -665,6 +699,12 @@ returned."
   (source-assembly :string)
   (source-assembly-size size-t)
   (additional-options compile-options))
+
+(declaim (inline assemble-into-spv))
+(defun assemble-into-spv (compiler source-assembly additional-options)
+  (%assemble-into-spv compiler
+                      source-assembly (length source-assembly)
+                      additional-options))
  
 ;; The following functions, operating on shaderc_compilation_result_t objects,
 ;; offer only the basic thread-safety guarantee.

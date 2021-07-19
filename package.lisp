@@ -38,7 +38,7 @@
    #:compile-options-set-optimization-level
    #:compile-options-set-forced-version-profile
    #:compile-options-set-include-callbacks
-   #:compile-options-suppress-warnings
+   #:compile-options-set-suppress-warnings
    #:compile-options-set-target-env
    #:compile-options-set-target-spirv
    #:compile-options-set-warnings-as-errors
@@ -69,3 +69,32 @@
    #:get-spv-version
    #:parse-version-profile))
 
+(defpackage #:shaderc
+  (:nicknames #:sc)
+  (:use #:cl)
+  (:export
+   #:with-compiler
+   #:with-compile-options
+   #:set-compile-options-from-set
+   ;; compile options
+   #:compile-options-set
+   #:macros
+   #:lang
+   #:generate-debug-info
+   #:optimization-level
+   #:forced-version-profile
+   #:suppress-warnings
+   #:target-env
+   #:target-spirv
+   #:warnings-as-errors
+   #:limits
+   #:auto-bind-uniforms
+   #:auto-combined-image-sampler
+   #:hlsl-io-mapping
+   #:hlsl-offsets
+   #:binding-bases
+   #:auto-map-locations
+   #:hlsl-register-set-and-bindings
+   #:enable-hlsl-functionality-1
+   #:invert-y
+   #:clamp-nan))
