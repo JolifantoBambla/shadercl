@@ -5,12 +5,14 @@ Common Lisp/CFFI bindings for [shaderc](https://github.com/google/shaderc).
 
 ## Requirements
 
-* [shaderc](https://github.com/google/shaderc): target version is `v2021.1`. `shaderc` is included in the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home).
+* [shaderc](https://github.com/google/shaderc): the target version is `v2021.1` but the API is not likely to change much, so other versions will probably work as well. `shaderc` is included in the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home), so you might want to follow the installation instructions there.
 
 ## Usage
 
-The following compiles a simple vertex shader to a SPIR-V binary.
-The result can be used directly to bind the `code` slot of a `vk:shader-module` (see [vk](https://github.com/JolifantoBambla/vk)).
+To compile a GLSL vertex shader to a SPIR-V binary, you can use the function `shaderc:compile-to-spv`.
+The result of this function can be used directly to bind the `code` slot of a `vk:shader-module-create-info` (see [vk](https://github.com/JolifantoBambla/vk#vkshadermodulecreateinfo)).
+
+E.g.:
 
 ```cl
 (defparameter vertex-shader "
@@ -33,31 +35,13 @@ void main() {
    gl_Position = uniformBuffer.mvpc * pos;
 }")
 
-(string-to-spv vertex-shader :vertex-shader "main" "some-tag")
+(compile-to-spv vertex-shader :vertex-shader)
 ```
 
 ### Compilation Options
 
-`shaderc` provides lots of compilation options using an opaque `shaderc_compile_options` handle which can be created using `%shaderc:compile-options-initialize`.
-Individual options can then be set by calling the respective functions (e.g. `%shaderc:compile-options-set-source-language compile-options`).
-
-On a higher level you can simply create a `compile-options-set` instance and use it to set all options at once by calling `set-compile-options-from-set`.
-E.g.:
-
-```cl
-(defparameter compile-opts
-  (make-instance 'compile-options-set
-                 :optimization-level :size))
-
-(let ((opts-handle (%shaderc:compile-options-initialize)))
-  (set-compile-options-from-set opts-handle compile-opts)
-  ;; compile some shaders ...
-  (%shaderc:compile-options-release ,compile-options))
-```
-
-You can also pass such an options object to `with-compile-options` or `string-to-spv` which internally call `set-compile-options-from-set`.
-
-You can set the following options using the class `compile-options-set`:
+The various compilation options the `shaderc` compiler offers, can be set via an instance of `shaderc:compile-options-set`.
+Each option is represented as a slot of this class. The following is a list of the supported options:
 
 ```cl
 "MACROS - A hash map of predefined macros and their values which should be added to the compilation options.
@@ -158,33 +142,70 @@ CLAMP-NAN - Sets whether the compiler generates code for max and min builtins wh
   Defaults to: NIL"
 ```
 
+Internally the `shaderc` library uses an opaque `shaderc_compile_options` handle and exposes a function for each of the options.
+The function `shaderc:set-compile-options-from-set` provides an easy way of setting all options at once.
+E.g.:
+
+```cl
+(defparameter compile-opts
+  (make-instance 'compile-options-set
+                 :optimization-level :size))
+
+(let ((opts-handle (%shaderc:compile-options-initialize)))
+  (set-compile-options-from-set opts-handle compile-opts)
+  ;; compile some shaders ...
+  (%shaderc:compile-options-release ,compile-options))
+```
+
+Note that `shaderc:compile-to-spv` takes a `shaderc:compile-options-set` as a key argument (`:options`, which defaults to `nil`) and uses `shaderc:set-compile-options-from-set` to apply all options.
+
+If you'd rather use the `shaderc_compile_options` handle directly, you can use the low level bindings exposed by `%shaderc`.
+`%shaderc:compile-options-initialize` creates an options handle and `shaderc:compile-options-release` must be used to release it again.
+`shaderc:with-compile-options` provides a shorthand for this.
+Individual options can then be set by calling the respective functions (e.g. `%shaderc:compile-options-set-source-language compile-options`).
+
 
 ### Using includes
 
-You can include other files from within your shaders using `#include` preprocessor directives.
-These can either be standard includes (e.g. `#include <somefile>`) or relative includes (e.g. `#include "../some/file.glsl`).
+The coolest thing about `shaderc` is that it lets you include other files using `#include` preprocessor directives.
+These can either be standard includes (e.g. `#include <somefile.glsl>`) or relative includes (e.g. `#include "../some/file.glsl`).
 
-By providing a callback for include requests, you can resolve such includes yourself and provide `shaderc` with the source code of the included files.
-In the callback you'll be provided with the requested resouce, the tag (this is whatever you passed the compiler as `tag` or `file-name`) and the include type (i.e. `:standard` or `:relative`).
-Furthermore, you'll get the client context as a `cffi:foreign-pointer` and the current depth of inclusions as an integer.
-With this information you should be able to resolve all include requests that come your way.
+Make sure to enable the `GL_GOOGLE_include_directive` in the shader you want to compile:
 
-To tell `shaderc` whether or not an include request was successful, you'll have to construct an instance of the `include-result` class and return it from your callback.
-This class has only three slots: `source-name`, `content` and `user-data`.
-If you could successfully resolve the include request `souce-name` should be bound to the absolute file path of the included source file.
-Otherwise it must be empty to signal `shaderc` that you could not find the requested file!
-`content` must either hold the source code read from the requested file or an error message if the include request could not be resolved.
-`user-data` can be used to pass a client context.
+```glsl
+#extension GL_GOOGLE_include_directive : enable
+```
 
-Since the includer (i.e. you) owns the include result, `shaderc` will tell you that it is done with the included resource via a second callback.
-You can use this callback to free any resources you allocated when resolving the include request.
+When the `shaderc` compiler encounters an `#include` directive, it triggers a callback which must resolve the include request.
+The `shaderc:compile-options-set` uses predefined default callbacks for this purpose.
+**If you want to use them, make sure to explicitly pass an instance of `shaderc:compile-options-set` to `shaderc:compile-to-spv` since `:options` defaults to `nil`!**
 
-Both callbacks as well as `user-data` can be set via the `compile-options-set` using the slots `include-resolve-callback`, `include-result-release-callback` and `user-data).
-For each of these, we provide default callbacks, which completely ignore the client context and instead relies on a global list of include directories (i.e. `*default-include-dirs*`) to resolve standard includes. 
+To resolve standard includes (`#include <somefile.glsl>`) the default callbacks use the parameter `shaderc:*default-include-dirs*` which will be searched for the requested source file.
 
+To resolve relative includes (`#include "some/file.glsl"`) the default callbacks try to resolve the file path based on the file path of the requesting source.
+This can either be the `:tag` given to `shaderc:compile-to-spv` or the file name of a previously included files when resolving a nested include.
+So, if you want to use relative includes in the shader source you pass to `shaderc:compile-to-spv`, make sure to also pass the file path as its `:tag` which corresponds to the "root" directory for your include.
+The default callbacks also allow absolute paths when resolving relative includes (e.g. `#include "/home/shadercl-user1337/somefile.glsl"`) in which case the `:tag` (or file path of the requesting source) is ignored.
 
-## TODO
+#### Custom callbacks
+Since resolving includes is left to the client (i.e. you), you can also provide custom callbacks and develop your own strategy for mapping included file paths to source files.
 
-* document usage
-* test includes
+For this you need to provide two callbacks: one for resolving the include directive and one for releasing allocated memory when the `shaderc` compiler is done with the included sources.
 
+The callback for resolving an include directive must return a pointer to a `%shaderc:include-result` struct, which must hold the identifier of the included source (this should be unique in the client context), the actual included source code as well as a pointer which can be used to pass some context information to the client.
+If the inclusion failed the identifier (`source-name`) must be empty!
+Also, in that case `content` should hold an error message instead of the included source code.
+Since the C struct also has members for the size of both strings, `%shaderc` also provides a wrapper class of the same name (i.e. `include-result`) as well as translators, which allow you to create such a pointer more easily.
+You can simply call:
+
+```cl
+(cffi:foreign-alloc '(:struct %shaderc:include-result)
+                    (make-instance 'include-result
+                                   :source-name "unique-identifier" ;; defaults to ""
+                                   :content "void someFunc() {}"    ;; defaults to ""
+                                   :user-data some-pointer))        ;; defaults to (cffi:null-pointer)
+```
+
+Since the client (i.e. you) owns the `include-result` and you most certainly allocated some memory when you resolved the include request, you should free this in a second callback.
+
+Check out the documentation of the `include-resolve-callback`, `include-result-release-callback` and `user-data` options in `shaderc:compile-options-set` for information on how the signatures are supposed to look like.
