@@ -75,13 +75,14 @@ jobs:
         # Roswell can only install SBCL on windows, it seems
         lisp: [sbcl-bin]
         os: [windows-latest]
+        vulkan-sdk: [1.2.182.0]
       fail-fast: false
 
     steps:
       - uses: actions/checkout@v2
       - name: Install Vulkan SDK
         run: |
-          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.2.182.0/windows/VulkanSDK-1.2.182.0-Installer.exe" -OutFile VulkanSDK.exe
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/${{ matrix.vulkan-sdk }}/windows/VulkanSDK-${{ matrix.vulkan-sdk }}-Installer.exe" -OutFile VulkanSDK.exe
           $installer = Start-Process -FilePath VulkanSDK.exe -Wait -PassThru -ArgumentList @("/S");
           $installer.WaitForExit();
           gci env:* | sort-object name
@@ -104,6 +105,7 @@ jobs:
         run: |
           # Add Roswel to path
           PATH="~/.roswell/bin:/c/roswell/bin:$PATH"
+          PATH="/c/VulkanSDK/${{ matrix.vulkan-sdk }}/Lib:/c/VulkanSDK/${{ matrix.vulkan-sdk }}/Lib32:$PATH"
           
           printenv
 
