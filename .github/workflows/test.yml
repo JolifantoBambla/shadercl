@@ -27,7 +27,7 @@ jobs:
         # allegro: roswell installs 32bit version
         # clisp: can't be installed via roswell
         # cmucl: can't load cffi (which is strange because that wasn't a problem before)
-        lisp: [abcl, ccl, cmu-bin, ecl, sbcl-bin]
+        lisp: [abcl, ccl, ecl, sbcl-bin]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -79,10 +79,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
       - name: Install Vulkan SDK
         run: |
-          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.1.126.0/windows/VulkanSDK-1.1.126.0-Installer.exe" -OutFile VulkanSDK.exe
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.2.176.1/windows/VulkanSDK-1.2.176.1-Installer.exe" -OutFile VulkanSDK.exe
           $installer = Start-Process -FilePath VulkanSDK.exe -Wait -PassThru -ArgumentList @("/S");
           $installer.WaitForExit();
       - name: Install Roswell
