@@ -9,7 +9,7 @@
 
 ;;;; base types
 
-(defctype size-t :unsigned-int)
+(defctype size-t :uint64)
 
 ;;; env.h
 (defcenum (target-env :unsigned-int)

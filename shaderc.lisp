@@ -24,37 +24,41 @@
 (defparameter *default-include-dirs* nil
   "A list of include directories for included shader sources used by DEFAULT-INCLUDE-RESOLVE-CALLBACK.")
 
+(defun default-include-resolver (user-data requested-source include-type requesting-source include-depth)
+  (let ((included-file (resolve-include requested-source
+                                        include-type
+                                        requesting-source
+                                        *default-include-dirs*)))
+    (let ((ptr (cffi:foreign-alloc
+                '(:struct %shaderc:include-result)
+                :initial-element
+                (if included-file
+                    (make-instance 'include-result
+                                   :source-name (namestring included-file)
+                                   :content (alexandria:read-file-into-string included-file)
+                                   :user-data user-data)
+                    (make-instance 'include-result
+                                   :content (format nil "Could not resolve ~(~a~) include request issued by source <~a> at depth ~a"
+                                                    include-type
+                                                    requesting-source
+                                                    include-depth)
+                                   :user-data user-data)))))
+      ptr)))
+
 (cffi:defcallback default-include-resolve-callback
-    (:pointer (:struct %shaderc:include-result))
+    :pointer
     ((user-data :pointer)
      (requested-source :string)
      (include-type %shaderc:include-type)
      (requesting-source :string)
      (include-depth %shaderc:size-t))
-  (let ((included-file (resolve-include requested-source
-                                        include-type
-                                        requesting-source
-                                        *default-include-dirs*)))
-    (if included-file
-        (make-instance 'include-result
-                       :source-name (namestring included-file)
-                       :content (alexandria:read-file-into-string included-file)
-                       :user-data user-data)
-        (make-instance 'include-result
-                       :content (format nil "Could not include file <~a> from <~a> at depth <~a>."
-                                        requested-source
-                                        requesting-source
-                                        include-depth)
-                       :user-data user-data))))
+  (default-include-resolver user-data requested-source include-type requesting-source include-depth))
 
 (cffi:defcallback default-include-result-release-callback
     :void
     ((user-data :pointer)
-     (include-result (:pointer (:struct %shaderc:include-result))))
-  ;; todo: this must free the include-result -> need to store it first
-  (when (and (cffi:null-pointer-p user-data)
-             (cffi:null-pointer-p include-result))
-    (format t "foo")))
+     (include-result :pointer))
+  (cffi:foreign-free include-result))
 
 (defclass compile-options-set ()
   ((macros
@@ -250,6 +254,7 @@ CLAMP-NAN - Sets whether the compiler generates code for max and min builtins wh
 "))
 
 (defun set-compile-options-from-set (compile-options options)
+  "Sets all options specified in an COMPILE-OPTIONS-SET on a %SHADERC:COMPILE-OPTIONS handle."
   (loop for name being the hash-key using (hash-value value) in (macros options) do
         (%shaderc:compile-options-add-macro-definition compile-options name value))
   (when (lang options)
