@@ -2,6 +2,13 @@
 
 (declaim (inline resolve-relative-include))
 (defun resolve-relative-include (requested-file requesting-file)
+  "Resolves a relative include request issued by a shader source.
+
+REQUESTED-FILE can hold either an absolute path (if it starts with a \"/\") or a path relative to the REQUESTING-FILE.
+REQUESTING-FILE holds the file path of the requesting source (this will be the file name or tag given to the compiler or the resolved path of a previously included file when resolving nested includes).
+
+Returns the absolute file path (TRUENAME) of the requested file if it exists, NIL otherwise.
+"
   (if (and (alexandria:starts-with-subseq "/" requested-file)
            (probe-file requested-file))
       requested-file
@@ -11,12 +18,24 @@
 
 (declaim (inline resolve-standard-include))
 (defun resolve-standard-include (requested-file include-directories)
+  "Resolves a standard include request issued by a shader source.
+
+REQUESTED-FILE is the file name of the requested source.
+INCLUDE-DIRECTORIES are the directories to search for REQUESTED-FILE.
+
+Returns the absolute file path (TRUENAME) of the requested file if it exists, NIL otherwise.
+"
   (loop for dir in include-directories
         for file = (probe-file (merge-pathnames requested-file dir))
         when file return file))
 
 (declaim (inline resolve-include))
 (defun resolve-include (requested-file include-type requesting-file include-dirs)
+  "Resolves an include request issued by a shader source.
+
+See RESOLVE-STANDARD-INCLUDE
+See RESOLVE-RELATIVE-INCLUDE
+"
   (if (eq :standard include-type)
       (resolve-standard-include requested-file include-dirs)
       (resolve-relative-include requested-file requesting-file)))
@@ -25,6 +44,14 @@
   "A list of include directories for included shader sources used by DEFAULT-INCLUDE-RESOLVE-CALLBACK.")
 
 (defun default-include-resolver (user-data requested-source include-type requesting-source include-depth)
+  "Resolves an include request issued by a shader source.
+This is the default behaviour for include requests when using COMPILE-OPTIONS-SET.
+
+*DEFAULT-INCLUDE-DIRS* is used to resolve absolute includes.
+The client context (USER-DATA) and INCLUDE-DEPTH are ignored.
+
+See RESOLVE-INCLUDE.
+"
   (let ((included-file (resolve-include requested-source
                                         include-type
                                         requesting-source
@@ -340,7 +367,7 @@ CLAMP-NAN - Sets whether the compiler generates code for max and min builtins wh
         (unwind-protect
              (if (eq :success (%shaderc:result-get-compilation-status result))
                  (let ((spv (make-array (/ (%shaderc:result-get-length result) 4)
-                                        :element-type '(unsinged-byte 32)
+                                        :element-type '(unsigned-byte 32)
                                         :fill-pointer 0)))
                    (loop for i from 0 below (/ (%shaderc:result-get-length result) 4)
                          do (vector-push (cffi:mem-aref (%shaderc:result-get-bytes result) :uint32 i) spv))

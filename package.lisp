@@ -82,6 +82,7 @@
    #:resolve-standard-include
    #:resolve-include
    #:set-compile-options-from-set
+   #:string-to-spv
    ;; compile options
    #:compile-options-set
    #:macros
