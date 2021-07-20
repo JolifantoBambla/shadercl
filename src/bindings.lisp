@@ -3,7 +3,8 @@
 (in-package #:%shaderc)
 
 (define-foreign-library shaderc
-  (:unix (:or "libshaderc_shared.so" "libshaderc_shared.so.1")))
+  (:unix (:or "libshaderc_shared.so" "libshaderc_shared.so.1"))
+  (:windows "libshaderc_shared.dll"))
 
 (use-foreign-library shaderc)
 
