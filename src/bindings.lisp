@@ -4,7 +4,7 @@
 
 (define-foreign-library shaderc
   (:unix (:or "libshaderc_shared.so" "libshaderc_shared.so.1"))
-  (:windows "shaderc_shared.dll" :search-path #P"/VulkanSDK/*.*.*.*/Lib*/"))
+  (:windows "shaderc_shared.dll"))
 
 (use-foreign-library shaderc)
 
