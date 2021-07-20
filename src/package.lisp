@@ -82,7 +82,7 @@
    #:resolve-standard-include
    #:resolve-include
    #:set-compile-options-from-set
-   #:string-to-spv
+   #:compile-to-spv
    ;; compile options
    #:compile-options-set
    #:macros
@@ -104,4 +104,6 @@
    #:hlsl-register-set-and-bindings
    #:enable-hlsl-functionality-1
    #:invert-y
-   #:clamp-nan))
+   #:clamp-nan
+   ;; errors
+   #:shaderc-error))

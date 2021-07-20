@@ -1,5 +1,26 @@
 (in-package #:shaderc)
 
+(define-condition shaderc-error (error)
+  ((enum
+    :reader enum
+    :initarg :enum)
+   (num-warnings
+    :reader num-warnings
+    :initarg :num-warnings)
+   (num-errors
+    :reader num-errors
+    :initarg :num-errors)
+   (message
+    :reader message
+    :initarg :message))
+  (:report (lambda (condition stream)
+             (format stream "shaderc ~(~a~): Caught ~a warnings & ~a errors.~%Details:~%~a~%"
+                     (enum condition)
+                     (num-warnings condition)
+                     (num-errors condition)
+                     (message condition))))
+  (:documentation "An error thrown if shader compilation fails."))
+
 (declaim (inline resolve-relative-include))
 (defun resolve-relative-include (requested-file requesting-file)
   "Resolves a relative include request issued by a shader source.
@@ -354,15 +375,22 @@ CLAMP-NAN - Sets whether the compiler generates code for max and min builtins wh
             ,@body)
        (%shaderc:compile-options-release ,compile-options))))
 
-(defun string-to-spv (source stage entry-point tag &optional (options nil))
+(defun compile-to-spv (source stage &key (entry-point "main") (tag "shader") (options nil))
   "Compiles a shader source string into a SPIR-V binary and returns it as a vector of 32-bit integers.
 
 SOURCE - the source code of the shader in GLSL or HLSL as a string.
+
 STAGE - the stage of the shader, must be a keyword from %SHADERC:SHADER-KIND.
+
 ENTRY-POINT - a string naming the entry point of the shader.
+  Defaults to: \"main\"
+
 TAG - a unique tag to identify the shader.
   Note: if you want to resolve relative includes, TAG must be the (real or virtual) file path of the shader.
+  Defaults to: \"shader\"
+
 OPTIONS - a COMPILE-OPTIONS-SET
+  Defaults to: NIL
 
 See COMPILE-OPTIONS-SET
 See RESOLVE-INCLUDE
@@ -385,9 +413,9 @@ Note: the returned SPIR-V code can be used directly as the CODE slot in a VK:SHA
                    (loop for i from 0 below (/ (%shaderc:result-get-length result) 4)
                          do (vector-push (cffi:mem-aref (%shaderc:result-get-bytes result) :uint32 i) spv))
                    spv)
-                 (error "Compilation failed with status <~a>.~%Caught ~a warnings and ~a errors.~%~%~a~%"
-                        (%shaderc:result-get-compilation-status result)
-                        (%shaderc:result-get-num-warnings result)
-                        (%shaderc:result-get-num-errors result)
-                        (%shaderc:result-get-error-message result)))
+                 (error 'shaderc-error
+                        :enum (%shaderc:result-get-compilation-status result)
+                        :num-warnings (%shaderc:result-get-num-warnings result)
+                        :num-errors (%shaderc:result-get-num-errors result)
+                        :message (%shaderc:result-get-error-message result)))
           (%shaderc:result-release result))))))
