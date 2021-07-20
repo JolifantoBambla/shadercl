@@ -8,5 +8,6 @@
   :serial t
   :depends-on (#:alexandria #:cffi)
   :components ((:file "package")
+               (:file "early")
                (:file "bindings")
                (:file "shaderc")))

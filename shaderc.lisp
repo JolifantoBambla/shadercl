@@ -355,7 +355,20 @@ CLAMP-NAN - Sets whether the compiler generates code for max and min builtins wh
        (%shaderc:compile-options-release ,compile-options))))
 
 (defun string-to-spv (source stage entry-point tag &optional (options nil))
-  "Compiles a shader source string into a SPIR-V binary and returns it as a vector of 32-bit integers."
+  "Compiles a shader source string into a SPIR-V binary and returns it as a vector of 32-bit integers.
+
+SOURCE - the source code of the shader in GLSL or HLSL as a string.
+STAGE - the stage of the shader, must be a keyword from %SHADERC:SHADER-KIND.
+ENTRY-POINT - a string naming the entry point of the shader.
+TAG - a unique tag to identify the shader.
+  Note: if you want to resolve relative includes, TAG must be the (real or virtual) file path of the shader.
+OPTIONS - a COMPILE-OPTIONS-SET
+
+See COMPILE-OPTIONS-SET
+See RESOLVE-INCLUDE
+
+Note: the returned SPIR-V code can be used directly as the CODE slot in a VK:SHADER-MODULE-CREATE-INFO.
+"
   (with-compile-options (compile-options options)
     (with-compiler (compiler)
       (let ((result (%shaderc:compile-into-spv compiler

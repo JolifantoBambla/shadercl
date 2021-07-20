@@ -7,10 +7,6 @@
 
 (use-foreign-library shaderc)
 
-;;;; base types
-
-(defctype size-t :uint64)
-
 ;;; env.h
 (defcenum (target-env :unsigned-int)
   "VULKAN: SPIR-V under Vulkan semantics
@@ -393,7 +389,20 @@ USER-DATA: User data to be passed along with this request."
    (user-data
     :initarg :user-data
     :accessor user-data
-    :initform (cffi:null-pointer))))
+    :initform (cffi:null-pointer)))
+  (:documentation  "An include result.
+
+SOURCE-NAME - The unique name of the included resource in the context of the includer (i.e. you).
+  Usually this will be the name of an included file, but since you can override how include
+  requests are resolved, this can be any string.
+  For failed inclusions this must be empty!
+
+CONTENT - The source code of the included file as a string OR an error message if the inclusion failed.
+
+USER-DATA - A CFFI:FOREIGN-POINTER that can be used for passing a client context to the include resolver.
+  In the default include resolver callback this is unused.
+  Defaults to: CFFI:NULL-POINTER
+"))
 
 (defmethod translate-into-foreign-memory (value (type c-include-result) ptr)
   (with-foreign-slots
