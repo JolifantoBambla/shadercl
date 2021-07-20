@@ -84,6 +84,8 @@ jobs:
           Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.2.182.0/windows/VulkanSDK-1.2.182.0-Installer.exe" -OutFile VulkanSDK.exe
           $installer = Start-Process -FilePath VulkanSDK.exe -Wait -PassThru -ArgumentList @("/S");
           $installer.WaitForExit();
+          gci env:* | sort-object name
+
       - name: Install Roswell
         env:
           LISP: ${{ matrix.lisp }}
@@ -103,5 +105,7 @@ jobs:
           # Add Roswel to path
           PATH="~/.roswell/bin:/c/roswell/bin:$PATH"
           
+          printenv
+
           # Run tests
           rove shaderc.asd
