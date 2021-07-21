@@ -105,7 +105,7 @@ jobs:
         run: |
           # Add Roswel to path
           PATH="~/.roswell/bin:/c/roswell/bin:$PATH"
-          PATH="/c/VulkanSDK/${{ matrix.vulkan-sdk }}/Lib:/c/VulkanSDK/${{ matrix.vulkan-sdk }}/Lib32:$PATH"
+          PATH="/c/VulkanSDK/${{ matrix.vulkan-sdk }}/Bin:/c/VulkanSDK/${{ matrix.vulkan-sdk }}/Bin32:$PATH"
           
           printenv
 
