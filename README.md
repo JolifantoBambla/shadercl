@@ -199,12 +199,6 @@ Individual options can then be set by calling the respective functions (e.g. `%s
 The coolest thing about `shaderc` is that it lets you include other files using `#include` preprocessor directives.
 These can either be standard includes (e.g. `#include <somefile.glsl>`) or relative includes (e.g. `#include "../some/file.glsl`).
 
-Make sure to enable the `GL_GOOGLE_include_directive` in the shader you want to compile:
-
-```glsl
-#extension GL_GOOGLE_include_directive : enable
-```
-
 When the `shaderc` compiler encounters an `#include` directive, it triggers a callback which must resolve the include request.
 The `shaderc:compile-options-set` uses predefined default callbacks for this purpose.
 **If you want to use them, make sure to explicitly pass an instance of `shaderc:compile-options-set` to `shaderc:compile-to-spv` since `:options` defaults to `nil`!**
@@ -215,6 +209,8 @@ To resolve relative includes (`#include "some/file.glsl"`) the default callbacks
 This can either be the `:tag` given to `shaderc:compile-to-spv` or the file name of a previously included files when resolving a nested include.
 So, if you want to use relative includes in the shader source you pass to `shaderc:compile-to-spv`, make sure to also pass the file path as its `:tag` which corresponds to the "root" directory for your include.
 The default callbacks also allow absolute paths when resolving relative includes (e.g. `#include "/home/shadercl-user1337/somefile.glsl"`) in which case the `:tag` (or file path of the requesting source) is ignored.
+
+Note that enabling the `GL_GOOGLE_include_directive` in the shader is not required for includes to work.
 
 #### Custom callbacks
 Since resolving includes is left to the client (i.e. you), you can also provide custom callbacks and develop your own strategy for mapping included file paths to source files.
