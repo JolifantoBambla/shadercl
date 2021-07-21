@@ -5,9 +5,38 @@ Common Lisp/CFFI bindings for [shaderc](https://github.com/google/shaderc).
 
 ## Requirements
 
-* [shaderc](https://github.com/google/shaderc): the target version is `v2021.1` but the API is not likely to change much, so other versions will probably work as well. `shaderc` is included in the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home), so you might want to follow the installation instructions there.
+### External Requirements
+* [shaderc](https://github.com/google/shaderc): the target version is `v2021.1` but the API is not likely to change much, so other versions will probably work as well. `shaderc` is included in the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) (beginning with version `1.2.135`, so you might want to follow the installation instructions there.
+
+### Common Lisp Dependencies
+All CL dependencies are installable via `quicklisp`:
+
+* alexandria
+* cffi
+
+### Supported CL implementations & Operating Systems
+`shaderc` has been tested on Linux (Ubuntu 20.04) and Windows 10 (currently only tested with SBCL).
+
+The following implementations are known to work and tested via GitHub Actions:
+
+* SBCL
+* CCL
+* ABCL
+* ECL
+
+## Installation
+This project is not on `quicklisp` yet, but you can clone the repository to one of your `ql:*local-project-directories*` and load it via:
+
+```cl
+(ql:quickload :shaderc)
+```
 
 ## Usage
+
+The system consists of two packages:
+
+* `%shaderc` contains the lower level `cffi` bindings
+* `shaderc` contains some higher level functions using `%shaderc`
 
 To compile a GLSL vertex shader to a SPIR-V binary, you can use the function `shaderc:compile-to-spv`.
 The result of this function can be used directly to bind the `code` slot of a `vk:shader-module-create-info` (see [vk](https://github.com/JolifantoBambla/vk#vkshadermodulecreateinfo)).
